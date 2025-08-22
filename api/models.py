@@ -179,3 +179,22 @@ class TubeBooking(models.Model):
     def save(self, *args, **kwargs):
         self.clean()
         super().save(*args, **kwargs)
+
+
+class NLPRequestLog(models.Model):
+    """
+    NLPRequestLog model for tracking NLP request inputs and outputs.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    inputText = models.TextField()
+    output = models.TextField()
+    createdAt = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'nlp_request_logs'
+        verbose_name = 'NLP Request Log'
+        verbose_name_plural = 'NLP Request Logs'
+        ordering = ['-createdAt']
+    
+    def __str__(self):
+        return f"NLP Request {self.id} - {self.createdAt}"
