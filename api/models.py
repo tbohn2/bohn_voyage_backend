@@ -13,8 +13,8 @@ class Customer(models.Model):
     Customer model with id, name, phone_number, email, and stripeCustomerId fields.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=255)
-    phone_number = models.CharField(validators=[phone_regex], max_length=17, blank=True)
+    name = models.CharField(max_length=255, blank=True, null=True)
+    phone_number = models.CharField(validators=[phone_regex], max_length=17, blank=True, null=True)
     email = models.EmailField(unique=True)
     stripeCustomerId = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

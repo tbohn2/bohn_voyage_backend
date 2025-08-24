@@ -17,8 +17,20 @@ def create_magic_link(email: str) -> str:
     }
 
     token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    encoded_token = urlencode({"token": token})
 
-    query = urlencode({"email": email, "token": token})
-    magic_url = f"{BASE_URL}?{query}"
-
+    magic_url = f"{BASE_URL}/api/customer-login/?{encoded_token}"
+    
     return magic_url
+
+def create_long_lasting_token(email: str) -> str:
+    exp = datetime.now(timezone.utc) + timedelta(days=30)
+
+    payload = {
+        "email": email,
+        "exp": exp.timestamp()
+    }
+
+    token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+    return token

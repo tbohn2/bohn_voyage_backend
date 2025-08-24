@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from django.conf import settings
 from datetime import timedelta
+from urllib.parse import unquote
 import jwt
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
@@ -18,7 +19,7 @@ from .serializers import (
     TubeTypeSerializer, TubeTypeCreateSerializer, TubeTypeUpdateSerializer,
     TubeBookingSerializer, TubeBookingCreateSerializer, TubeBookingUpdateSerializer
 )
-from .services.customer_auth import create_magic_link
+from .services.customer_auth import create_magic_link, create_long_lasting_token
 from .services.utils import send_email
 
 
@@ -154,15 +155,27 @@ class CustomerAuthViewSet(APIView):
     """
     ViewSet for Customer authentication.
     """
+
+    def get(self, request):
+        """
+        Get customer authentication status. Used for polling customer authentication status.
+        """
+        token = request.COOKIES.get('jwt')
+        if token:
+            return Response({'authenticated': True}, status=status.HTTP_200_OK)
+        return Response({'authenticated': False}, status=status.HTTP_200_OK)
+
     def post(self, request):
         """
         Is customer already logged in?
         """
-
         email = request.data.get('email')
         token = request.COOKIES.get('jwt')
         
         jwt_auth = JWTAuthentication()
+
+        subject = "Verify link for booking"
+        message = "Click the link to verify your email to proceed with booking:\n"
 
         if token:
             try:
@@ -175,7 +188,7 @@ class CustomerAuthViewSet(APIView):
 
             except (InvalidToken, TokenError):
                 magic_link = create_magic_link(email)
-                send_email(email, "Magic Link", magic_link)
+                send_email(email, subject, message + magic_link)
                 return Response(
                     {'message': 'Invalid token. Magic link sent to email', 'authenticated': False},
                     status=status.HTTP_401_UNAUTHORIZED
@@ -183,10 +196,47 @@ class CustomerAuthViewSet(APIView):
 
         # No token provided, send magic link
         magic_link = create_magic_link(email)
-        send_email(email, "Magic Link", magic_link)
+        send_email(email, subject, message + magic_link)
         return Response(
             {'message': 'Magic link sent to email', 'authenticated': False},
             status=status.HTTP_200_OK
         )
         
+
+class CustomerLoginViewSet(APIView):
+    """
+    ViewSet for Customer login.
+    """
+    def get(self, request):
+        """
+        Get customer email from jwt token in url and issue long lasting http cookies only token
+        """
+        token = request.query_params.get('token')
+        if not token:
+            return Response({'error': 'No token provided'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            email = payload.get('email')
+            if not email:
+                return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                customer = Customer.objects.get(email=email)
+            except Customer.DoesNotExist:
+                customer = Customer.objects.create(email=email)
+
+            email = customer.email
+            long_lasting_token = create_long_lasting_token(email)
+            response = Response({'message': 'Customer created'}, status=status.HTTP_200_OK)
+            response.set_cookie('jwt', long_lasting_token, httponly=True, secure=True, samesite='Strict')
+            return response
+
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Token has expired'}, status=status.HTTP_401_UNAUTHORIZED)
+        except jwt.InvalidTokenError:
+            print(token)
+            return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
+        except Exception as e:
+            return Response({'error': f'Authentication failed: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
 

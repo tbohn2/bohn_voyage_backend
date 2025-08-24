@@ -45,7 +45,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'bohnvoyageaz@gmail.com'
 EMAIL_HOST_PASSWORD = config('GMAIL_PW')
-DEFAULT_FROM_EMAIL = 'bohnvoyageaz@gmail.com'
+DEFAULT_FROM_EMAIL = 'Bohn Voyage AZ <bohnvoyageaz@gmail.com>'
 
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:8000')
 
