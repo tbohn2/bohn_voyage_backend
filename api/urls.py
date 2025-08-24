@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import AdminViewSet, CustomerViewSet, BookingViewSet, PaymentViewSet, TubeTypeViewSet, TubeBookingViewSet
+from .views import AdminViewSet, CustomerViewSet, BookingViewSet, PaymentViewSet, TubeTypeViewSet, TubeBookingViewSet, CustomerAuthViewSet
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 router = DefaultRouter()
@@ -13,6 +13,7 @@ router.register(r'tube-bookings', TubeBookingViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('login/', TokenObtainPairView.as_view(), name='login'),
-    path('refresh/', TokenRefreshView.as_view(), name='refresh'),
+    path('login/', TokenObtainPairView.as_view(), name='login'), # Admin login
+    path('refresh/', TokenRefreshView.as_view(), name='refresh'), # Admin refresh
+    path('customer-auth/', CustomerAuthViewSet.as_view(), name='customer-auth'),
 ]

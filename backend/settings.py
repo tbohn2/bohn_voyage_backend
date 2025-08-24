@@ -30,6 +30,8 @@ REST_FRAMEWORK = {
     ),
 }
 
+SECRET_KEY = config('SECRET_KEY')
+
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
@@ -44,6 +46,8 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'bohnvoyageaz@gmail.com'
 EMAIL_HOST_PASSWORD = config('GMAIL_PW')
 DEFAULT_FROM_EMAIL = 'bohnvoyageaz@gmail.com'
+
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:8000')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

@@ -15,6 +15,7 @@ def send_email(recipient, subject, message):
         bool: True if email was sent successfully, False otherwise
     """
     try:
+        print(f"Sending email to {recipient} with subject {subject} and message {message}")
         send_mail(
             subject=subject,
             message=message,
