@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from django.contrib.auth.models import User
 from django.conf import settings
 import jwt
+import stripe
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from .services.auth import CookieJWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
@@ -224,4 +225,83 @@ class CustomerLoginViewSet(APIView):
             return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
         except Exception as e:
             return Response({'error': f'Authentication failed: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CreatePaymentIntentView(APIView):
+    """
+    View for creating Stripe payment intents.
+    """
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        """
+        Create a Stripe payment intent.
+        Expected payload:
+        {
+            "amount": 2000,  # Amount in cents
+            "currency": "usd",
+            "customer_email": "customer@example.com",  # Optional
+            "metadata": {  # Optional
+                "booking_id": "123",
+                "description": "Tube rental payment"
+            }
+        }
+        """
+        try:
+            stripe.api_key = settings.STRIPE_SECRET_KEY
+            
+            amount = request.data.get('amount')
+            currency = request.data.get('currency', 'usd')
+            customer_email = request.data.get('customer_email')
+            metadata = request.data.get('metadata', {})
+            
+            if not amount:
+                return Response(
+                    {'error': 'Amount is required'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            try:
+                amount = int(amount)
+                if amount <= 0:
+                    raise ValueError("Amount must be positive")
+            except (ValueError, TypeError):
+                return Response(
+                    {'error': 'Amount must be a positive integer'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            intent_params = {
+                'amount': amount,
+                'currency': currency,
+                'automatic_payment_methods': {
+                    'enabled': True,
+                },
+                'metadata': metadata
+            }
+            
+            if customer_email:
+                intent_params['receipt_email'] = customer_email
+            
+            intent = stripe.PaymentIntent.create(**intent_params)
+            
+            return Response({
+                'client_secret': intent.client_secret,
+                'payment_intent_id': intent.id,
+                'amount': intent.amount,
+                'currency': intent.currency,
+                'status': intent.status
+            }, status=status.HTTP_201_CREATED)
+            
+        except stripe.error.StripeError as e:
+            return Response(
+                {'error': f'Stripe error: {str(e)}'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Server error: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 

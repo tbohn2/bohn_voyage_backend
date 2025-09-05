@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import AdminViewSet, CustomerViewSet, BookingViewSet, PaymentViewSet, TubeTypeViewSet, TubeBookingViewSet, CustomerAuthViewSet, CustomerLoginViewSet
+from .views import AdminViewSet, CustomerViewSet, BookingViewSet, PaymentViewSet, TubeTypeViewSet, TubeBookingViewSet, CustomerAuthViewSet, CustomerLoginViewSet, CreatePaymentIntentView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 router = DefaultRouter()
@@ -17,4 +17,5 @@ urlpatterns = [
     path('refresh/', TokenRefreshView.as_view(), name='refresh'), # Admin refresh
     path('customer-auth/', CustomerAuthViewSet.as_view(), name='customer-auth'),
     path('customer-login/', CustomerLoginViewSet.as_view(), name='customer-login'),
+    path('create-payment-intent/', CreatePaymentIntentView.as_view(), name='create-payment-intent'),    
 ]
