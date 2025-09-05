@@ -25,8 +25,8 @@ INSTALLED_APPS = [
 ]
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.AllowAny",
     ),
 }
 
@@ -48,6 +48,9 @@ EMAIL_HOST_PASSWORD = config('GMAIL_PW')
 DEFAULT_FROM_EMAIL = 'Bohn Voyage AZ <bohnvoyageaz@gmail.com>'
 
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:8000')
+
+STRIPE_PUBLIC_KEY = config('STRIPE_PUBLIC_KEY')
+STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

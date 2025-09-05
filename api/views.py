@@ -2,14 +2,11 @@ from rest_framework import viewsets, mixins, permissions, status
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
-from django.utils import timezone
 from django.conf import settings
-from datetime import timedelta
-from urllib.parse import unquote
 import jwt
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
+from .services.auth import CookieJWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from .models import Customer, Booking, Payment, TubeType, TubeBooking
 from .serializers import (
@@ -21,7 +18,6 @@ from .serializers import (
 )
 from .services.customer_auth import create_magic_link, create_long_lasting_token
 from .services.utils import send_email
-
 
 class AdminViewSet(mixins.CreateModelMixin,
                    mixins.UpdateModelMixin,
@@ -155,12 +151,11 @@ class CustomerAuthViewSet(APIView):
     """
     ViewSet for Customer authentication.
     """
-
     def get(self, request):
         """
         Get customer authentication status. Used for polling customer authentication status.
         """
-        token = request.COOKIES.get('jwt')
+        token = request.COOKIES.get('token')
         if token:
             return Response({'authenticated': True}, status=status.HTTP_200_OK)
         return Response({'authenticated': False}, status=status.HTTP_200_OK)
@@ -170,37 +165,23 @@ class CustomerAuthViewSet(APIView):
         Is customer already logged in?
         """
         email = request.data.get('email')
-        token = request.COOKIES.get('jwt')
-        
-        jwt_auth = JWTAuthentication()
+        token = request.COOKIES.get('token')
+
+        if token:
+            jwt_auth = CookieJWTAuthentication()
+            try:
+                user, validated_token = jwt_auth.authenticate(request)
+                if user and user.is_authenticated:
+                    customer_id = validated_token.get('customer_id')
+                    return Response({'authenticated': True, 'user_id': customer_id}, status=200)
+            except (InvalidToken, TokenError):
+                pass
 
         subject = "Verify link for booking"
         message = "Click the link to verify your email to proceed with booking:\n"
-
-        if token:
-            try:
-                validated_token = jwt_auth.get_validated_token(token)
-                if validated_token:
-                    return Response(
-                        {'authenticated': True},
-                        status=status.HTTP_200_OK
-                    )
-
-            except (InvalidToken, TokenError):
-                magic_link = create_magic_link(email)
-                send_email(email, subject, message + magic_link)
-                return Response(
-                    {'message': 'Invalid token. Magic link sent to email', 'authenticated': False},
-                    status=status.HTTP_401_UNAUTHORIZED
-                )
-
-        # No token provided, send magic link
         magic_link = create_magic_link(email)
         send_email(email, subject, message + magic_link)
-        return Response(
-            {'message': 'Magic link sent to email', 'authenticated': False},
-            status=status.HTTP_200_OK
-        )
+        return Response({'message': 'Magic link sent to email', 'authenticated': False}, status=200)
         
 
 class CustomerLoginViewSet(APIView):
@@ -209,29 +190,33 @@ class CustomerLoginViewSet(APIView):
     """
     def get(self, request):
         """
-        Get customer email from jwt token in url and issue long lasting http cookies only token
+        Get customer email from token in magic link url and issue long lasting http cookies only token
         """
         token = request.query_params.get('token')
         if not token:
             return Response({'error': 'No token provided'}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            email = payload.get('email')
+            JWT_SECRET = settings.SECRET_KEY
+            max_age_seconds = 3600
+            serializer = URLSafeTimedSerializer(JWT_SECRET)         
+            email = serializer.loads(token, salt="email-verification", max_age=max_age_seconds)
+      
             if not email:
                 return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
             
-            try:
-                customer = Customer.objects.get(email=email)
-            except Customer.DoesNotExist:
-                customer = Customer.objects.create(email=email)
+            customer, created = Customer.objects.get_or_create(email=email)
 
-            email = customer.email
-            long_lasting_token = create_long_lasting_token(email)
-            response = Response({'message': 'Customer created'}, status=status.HTTP_200_OK)
-            response.set_cookie('jwt', long_lasting_token, httponly=True, secure=True, samesite='Strict')
+            message = "Customer created" if created else "Customer logged in"
+
+            long_lasting_token = create_long_lasting_token(customer)
+            response = Response({'message': message}, status=status.HTTP_200_OK)
+            response.set_cookie('token', long_lasting_token, httponly=True)
+            # response.set_cookie('token', long_lasting_token, httponly=True, secure=True, samesite='Strict')
             return response
 
+        except (SignatureExpired, BadSignature):
+            return Response({'error': 'Token has expired'}, status=status.HTTP_401_UNAUTHORIZED)
         except jwt.ExpiredSignatureError:
             return Response({'error': 'Token has expired'}, status=status.HTTP_401_UNAUTHORIZED)
         except jwt.InvalidTokenError:
