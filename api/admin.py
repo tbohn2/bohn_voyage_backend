@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Customer, Booking, Payment, TubeType, TubeBooking
+from .models import Customer, Booking, TubeType, TubeBooking
 
 
 @admin.register(Customer)
@@ -55,43 +55,12 @@ class TubeTypeAdmin(admin.ModelAdmin):
         return False
 
 
-@admin.register(Payment)
-class PaymentAdmin(admin.ModelAdmin):
-    """
-    Admin interface for Payment model.
-    """
-    list_display = ('id', 'customer', 'amount', 'currency', 'paymentStatus', 'paymentDate', 'stripPaymentId')
-    list_filter = ('paymentStatus', 'currency', 'paymentDate', 'created_at', 'updated_at')
-    search_fields = ('customer__name', 'customer__email', 'stripPaymentId', 'id')
-    readonly_fields = ('id', 'paymentDate', 'created_at', 'updated_at')
-    ordering = ('-paymentDate',)
-    
-    fieldsets = (
-        ('Payment Information', {
-            'fields': ('stripPaymentId', 'amount', 'currency', 'paymentStatus')
-        }),
-        ('Customer', {
-            'fields': ('customer',)
-        }),
-        ('Receipt', {
-            'fields': ('receipturl',)
-        }),
-        ('Timestamps', {
-            'fields': ('paymentDate', 'created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
-    
-    def has_delete_permission(self, request, obj=None):
-        return False
-
-
 @admin.register(Booking)
 class BookingAdmin(admin.ModelAdmin):
     """
     Admin interface for Booking model.
     """
-    list_display = ('id', 'customer', 'startTime', 'endTime', 'payment', 'created_at')
+    list_display = ('id', 'customer', 'startTime', 'endTime', 'created_at')
     list_filter = ('startTime', 'endTime', 'created_at', 'updated_at')
     search_fields = ('customer__name', 'customer__email', 'id')
     readonly_fields = ('id', 'created_at', 'updated_at')
@@ -100,10 +69,7 @@ class BookingAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Booking Information', {
             'fields': ('customer', 'startTime', 'endTime')
-        }),
-        ('Payment', {
-            'fields': ('payment',)
-        }),
+        }),        
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)

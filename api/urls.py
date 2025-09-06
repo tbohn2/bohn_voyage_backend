@@ -1,13 +1,12 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import AdminViewSet, CustomerViewSet, BookingViewSet, PaymentViewSet, TubeTypeViewSet, TubeBookingViewSet, CustomerAuthViewSet, CustomerLoginViewSet, CreatePaymentIntentView
+from .views import AdminViewSet, CustomerViewSet, BookingViewSet, TubeTypeViewSet, TubeBookingViewSet, CustomerAuthViewSet, CustomerLoginViewSet, CreatePaymentIntentView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 router = DefaultRouter()
 router.register(r'admins', AdminViewSet)
 router.register(r'customers', CustomerViewSet)
 router.register(r'bookings', BookingViewSet)
-router.register(r'payments', PaymentViewSet)
 router.register(r'tube-types', TubeTypeViewSet)
 router.register(r'tube-bookings', TubeBookingViewSet)
 

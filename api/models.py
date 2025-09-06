@@ -30,51 +30,6 @@ class Customer(models.Model):
         return f"{self.name} ({self.email})"
 
 
-class Payment(models.Model):
-    """
-    Payment model with id, stripPaymentId, amount, paymentStatus, paymentDate, customerId, receipturl, and currency fields.
-    """
-    PAYMENT_STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('completed', 'Completed'),
-        ('failed', 'Failed'),
-        ('cancelled', 'Cancelled'),
-        ('refunded', 'Refunded'),
-    ]
-    
-    CURRENCY_CHOICES = [
-        ('USD', 'US Dollar'),
-        ('EUR', 'Euro'),
-        ('GBP', 'British Pound'),
-        ('CAD', 'Canadian Dollar'),
-    ]
-    
-    id = models.AutoField(primary_key=True)
-    stripPaymentId = models.CharField(max_length=255, unique=True)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    paymentStatus = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
-    paymentDate = models.DateTimeField(auto_now_add=True)
-    customer = models.ForeignKey(
-        Customer,
-        on_delete=models.CASCADE,
-        related_name='payments',
-        db_column='customerId'
-    )
-    receipturl = models.URLField(max_length=500, blank=True, null=True)
-    currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default='USD')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        db_table = 'payments'
-        verbose_name = 'Payment'
-        verbose_name_plural = 'Payments'
-        ordering = ['-paymentDate']
-    
-    def __str__(self):
-        return f"Payment {self.id} - {self.customer.name} ({self.amount} {self.currency})"
-
-
 class TubeType(models.Model):
     """
     TubeType model with id, price, size, and qty fields.
@@ -98,8 +53,16 @@ class TubeType(models.Model):
 
 class Booking(models.Model):
     """
-    Booking model with id, startTime, endTime, CustomerId, and paymentId fields.
+    Booking model with id, startTime, endTime, CustomerId, and payment fields.
     """
+    PAYMENT_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('succeeded', 'Succeeded'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+        ('refunded', 'Refunded'),
+    ]
+    
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     startTime = models.DateTimeField()
     endTime = models.DateTimeField()
@@ -109,13 +72,9 @@ class Booking(models.Model):
         related_name='bookings',
         db_column='CustomerId'
     )
-    payment = models.OneToOneField(
-        Payment,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='booking'
-    )
+    stripePaymentIntentId = models.CharField(max_length=255, unique=True, blank=True, null=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    paymentStatus = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

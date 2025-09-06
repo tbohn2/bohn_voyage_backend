@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Customer, Booking, Payment, TubeType, TubeBooking
+from .models import Customer, Booking, TubeType, TubeBooking
 
 
 class AdminSerializer(serializers.ModelSerializer):
@@ -146,62 +146,19 @@ class TubeBookingUpdateSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class PaymentSerializer(serializers.ModelSerializer):
-    """
-    Serializer for Payment model.
-    """
-    customer_name = serializers.CharField(source='customer.name', read_only=True)
-    customer_email = serializers.EmailField(source='customer.email', read_only=True)
-    
-    class Meta:
-        model = Payment
-        fields = ['id', 'stripPaymentId', 'amount', 'paymentStatus', 'paymentDate', 
-                 'customer', 'customer_name', 'customer_email', 'receipturl', 'currency', 
-                 'created_at', 'updated_at']
-        read_only_fields = ['id', 'paymentDate', 'created_at', 'updated_at']
-
-
-class PaymentCreateSerializer(serializers.ModelSerializer):
-    """
-    Serializer for creating new Payment records.
-    """
-    class Meta:
-        model = Payment
-        fields = ['stripPaymentId', 'amount', 'paymentStatus', 'customer', 'receipturl', 'currency']
-    
-    def validate_amount(self, value):
-        if value <= 0:
-            raise serializers.ValidationError("Amount must be greater than zero.")
-        return value
-
-
-class PaymentUpdateSerializer(serializers.ModelSerializer):
-    """
-    Serializer for updating Payment records.
-    """
-    class Meta:
-        model = Payment
-        fields = ['stripPaymentId', 'amount', 'paymentStatus', 'customer', 'receipturl', 'currency']
-    
-    def validate_amount(self, value):
-        if value <= 0:
-            raise serializers.ValidationError("Amount must be greater than zero.")
-        return value
-
-
 class BookingSerializer(serializers.ModelSerializer):
     """
     Serializer for Booking model.
     """
     customer_name = serializers.CharField(source='customer.name', read_only=True)
     customer_email = serializers.EmailField(source='customer.email', read_only=True)
-    payment_details = PaymentSerializer(source='payment', read_only=True)
     tube_bookings = TubeBookingSerializer(many=True, read_only=True)
     
     class Meta:
         model = Booking
         fields = ['id', 'startTime', 'endTime', 'customer', 'customer_name', 'customer_email', 
-                 'payment', 'payment_details', 'tube_bookings', 'created_at', 'updated_at']
+                 'stripePaymentIntentId', 'amount', 'paymentStatus', 'receipturl',
+                 'tube_bookings', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
@@ -211,7 +168,7 @@ class BookingCreateSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Booking
-        fields = ['startTime', 'endTime', 'customer', 'payment']
+        fields = ['startTime', 'endTime', 'customer', 'stripePaymentIntentId', 'amount', 'paymentStatus']
     
     def validate(self, attrs):
         start_time = attrs.get('startTime')
@@ -229,7 +186,7 @@ class BookingUpdateSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Booking
-        fields = ['startTime', 'endTime', 'customer', 'payment']
+        fields = ['startTime', 'endTime', 'customer', 'stripePaymentIntentId', 'amount', 'paymentStatus']
     
     def validate(self, attrs):
         start_time = attrs.get('startTime')
@@ -241,17 +198,6 @@ class BookingUpdateSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class CustomerWithPaymentsSerializer(serializers.ModelSerializer):
-    """
-    Serializer for Customer model with nested payments.
-    """
-    payments = PaymentSerializer(many=True, read_only=True)
-    
-    class Meta:
-        model = Customer
-        fields = ['id', 'name', 'phone_number', 'email', 'stripeCustomerId', 
-                 'created_at', 'updated_at', 'payments']
-        read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class CustomerWithBookingsSerializer(serializers.ModelSerializer):
