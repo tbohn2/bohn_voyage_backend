@@ -318,3 +318,68 @@ class CreatePaymentIntentView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+
+@csrf_exempt
+def stripe_webhook(request):
+    """
+    Stripe webhook handler - bypasses Django's authentication and CSRF
+    """
+    if request.method != 'POST':
+        return HttpResponse(status=405)  # Method not allowed
+    
+    print("💰 Stripe webhook received")
+    payload = request.body
+    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE")
+    event = None
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError:
+        print("❌ Invalid payload")
+        return HttpResponse(status=400)
+    except stripe.error.SignatureVerificationError:
+        print("❌ Invalid signature")
+        return HttpResponse(status=400)
+
+    status = ''
+    if event["type"] == "payment_intent.cancelled":
+        status = 'cancelled'
+    if event["type"] == "payment_intent.succeeded":
+        status = 'succeeded'
+    if event["type"] == "payment_intent.payment_failed":
+        status = 'failed'
+    
+    payment_intent = event["data"]["object"]
+
+    stripe_payment_intent_id = payment_intent.get("id")
+    amount = payment_intent.get("amount_received") or payment_intent.get("amount")
+    currency = payment_intent.get("currency")
+    customer_email = payment_intent.get("receipt_email")
+
+    # Update or create booking with payment information
+    booking = Booking.objects.filter(stripePaymentIntentId=stripe_payment_intent_id).first()
+    if booking:
+        # Update existing booking with payment status
+        booking.paymentStatus = status
+        booking.amount = amount
+        booking.currency = currency
+        booking.save()
+    else:
+        # Create new booking if not found (this shouldn't happen in normal flow)
+        # You might want to handle this case differently based on your business logic
+        print(f"⚠️ No booking found for payment intent {stripe_payment_intent_id}")
+
+    if event["type"] == "payment_intent.succeeded":
+        payment_intent = event["data"]["object"]
+        print("💰 Payment succeeded:", payment_intent["id"])
+        # TODO: mark booking as paid, send confirmation email, etc.
+
+    elif event["type"] == "payment_intent.payment_failed":
+        payment_intent = event["data"]["object"]
+        print("❌ Payment failed:", payment_intent["id"])
+        # TODO: notify user or log
+
+    # Always return 200 to acknowledge receipt
+    return HttpResponse(status=200)
