@@ -2,6 +2,9 @@ from rest_framework import viewsets, mixins, permissions, status
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
+import stripe
+from django.http import HttpResponse, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
 from django.conf import settings
 import jwt
@@ -215,16 +218,19 @@ class CreatePaymentIntentView(APIView):
     
     def post(self, request):
         """
-        Create a Stripe payment intent.
-        Expected payload:
+        Create a booking and a Stripe payment intent.
+        Request payload:
         {
             "amount": 2000,  # Amount in cents
-            "currency": "usd",
-            "customer_email": "customer@example.com",  # Optional
-            "metadata": {  # Optional
-                "booking_id": "123",
-                "description": "Tube rental payment"
-            }
+            "currency": "usd",            
+            "start_time": "2025-01-01T00:00:00Z",
+            "end_time": "2025-01-01T00:00:00Z",
+            "tube_types": [
+                {
+                    "tubeTypeId": "123", # Tube type id
+                    "numOfTubesBooked": 1
+                }
+            ]
         }
         """
         try:
@@ -232,9 +238,7 @@ class CreatePaymentIntentView(APIView):
             
             amount = request.data.get('amount')
             currency = request.data.get('currency', 'usd')
-            customer_email = request.data.get('customer_email')
-            metadata = request.data.get('metadata', {})
-            
+                        
             if not amount:
                 return Response(
                     {'error': 'Amount is required'}, 
@@ -256,14 +260,44 @@ class CreatePaymentIntentView(APIView):
                 'currency': currency,
                 'automatic_payment_methods': {
                     'enabled': True,
-                },
-                'metadata': metadata
+                }
             }
             
-            if customer_email:
-                intent_params['receipt_email'] = customer_email
-            
-            intent = stripe.PaymentIntent.create(**intent_params)
+            intent = stripe.PaymentIntent.create(**intent_params)      
+
+            customer_id = request.user.id
+            customer = Customer.objects.get(id=customer_id)
+
+            start_time = request.data.get('start_time')
+            end_time = request.data.get('end_time')
+
+            booking = Booking.objects.create(
+                customer=customer,
+                amount=request.data.get('amount'),
+                paymentStatus='pending',
+                startTime=start_time,
+                endTime=end_time
+            )
+
+            booking.stripePaymentIntentId = intent.id
+            booking.save()
+
+            for tube_type in request.data.get('tube_types', []):
+                tube_type_obj = TubeType.objects.get(id=tube_type.get('tubeTypeId'))
+                if not tube_type_obj:
+                    return Response(
+                        {'error': 'Tube type not found'}, 
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+                tube_booking = TubeBooking.objects.create(
+                    booking=booking,
+                    tubeType=tube_type_obj,
+                    numOfTubesBooked=tube_type.get('numOfTubesBooked')
+                )
+
+                tube_booking.save()
+                
             
             return Response({
                 'client_secret': intent.client_secret,

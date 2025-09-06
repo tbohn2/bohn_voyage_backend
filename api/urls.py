@@ -16,5 +16,5 @@ urlpatterns = [
     path('refresh/', TokenRefreshView.as_view(), name='refresh'), # Admin refresh
     path('customer-auth/', CustomerAuthViewSet.as_view(), name='customer-auth'),
     path('customer-login/', CustomerLoginViewSet.as_view(), name='customer-login'),
-    path('create-payment-intent/', CreatePaymentIntentView.as_view(), name='create-payment-intent'),    
+    path('create-payment-intent/', CreatePaymentIntentView.as_view(), name='create-payment-intent'),   
 ]
