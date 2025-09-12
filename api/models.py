@@ -38,6 +38,7 @@ class TubeType(models.Model):
     price = models.FloatField()
     size = models.CharField(max_length=100)
     qty = models.IntegerField()
+    description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

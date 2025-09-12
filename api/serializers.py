@@ -43,7 +43,7 @@ class TubeTypeSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = TubeType
-        fields = ['id', 'price', 'size', 'qty', 'created_at', 'updated_at']
+        fields = ['id', 'price', 'size', 'qty', 'description', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
@@ -53,7 +53,7 @@ class TubeTypeCreateSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = TubeType
-        fields = ['price', 'size', 'qty']
+        fields = ['price', 'size', 'qty', 'description']
     
     def validate_price(self, value):
         if value <= 0:
@@ -72,7 +72,7 @@ class TubeTypeUpdateSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = TubeType
-        fields = ['price', 'size', 'qty']
+        fields = ['price', 'size', 'qty', 'description']
     
     def validate_price(self, value):
         if value <= 0:
