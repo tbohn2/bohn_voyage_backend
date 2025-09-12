@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import AdminViewSet, CustomerViewSet, BookingViewSet, TubeTypeViewSet, TubeBookingViewSet, CustomerAuthViewSet, CustomerLoginViewSet, CreatePaymentIntentView, stripe_webhook
+from .views import AdminViewSet, CustomerViewSet, BookingViewSet, TubeTypeViewSet, TubeBookingViewSet, CustomerAuthViewSet, CustomerLoginViewSet, CreatePaymentIntentView, stripe_webhook, NLPViewSet
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 router = DefaultRouter()
@@ -18,4 +18,5 @@ urlpatterns = [
     path('customer-auth/', CustomerAuthViewSet.as_view(), name='customer-auth'),
     path('customer-login/', CustomerLoginViewSet.as_view(), name='customer-login'),
     path('create-payment-intent/', CreatePaymentIntentView.as_view(), name='create-payment-intent'),   
+    path('nlp/', NLPViewSet.as_view(), name='nlp'),
 ]

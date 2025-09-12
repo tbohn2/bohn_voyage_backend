@@ -9,6 +9,7 @@ from django.contrib.auth.models import User
 from django.conf import settings
 import jwt
 import stripe
+import openai
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from .services.auth import CookieJWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
@@ -21,6 +22,8 @@ from .serializers import (
 )
 from .services.customer_auth import create_magic_link, create_long_lasting_token
 from .services.utils import send_email
+from datetime import datetime
+import json
 
 class AdminViewSet(mixins.CreateModelMixin,
                    mixins.UpdateModelMixin,
@@ -317,6 +320,64 @@ class CreatePaymentIntentView(APIView):
                 {'error': f'Server error: {str(e)}'}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class NLPViewSet(APIView):
+    """
+    View for NLP requests.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        """
+        Create a NLP request.
+        """
+        tube_types = TubeType.objects.values_list('id', 'size', 'qty')
+        tube_types = {size: (id, qty) for id, size, qty in tube_types}
+        tube_type_sizes = {size for size in tube_types}
+        inputText = request.data.get('inputText')
+        today = datetime.now().strftime("%Y-%m-%d")
+    
+        client = openai.OpenAI(api_key=settings.OPEN_AI_KEY)
+
+        output = client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[
+                {"role": "system", "content": f"""
+                    You are extracting structured data from user requests.
+                    Available tube types: {tube_type_sizes}
+                    Today's date: {today}
+                    Always return JSON with keys: start_time, tube_types (each with size and numOfTubesBooked).
+                    """},
+                {"role": "user", "content": inputText}
+            ],
+            response_format={"type": "json_schema", "json_schema": {
+                "name": "booking_request",
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "start_time": {"type": "string", "format": "date-time", "default": today},
+                        "tube_types": {"type": "array", "items": {"type": "object", "properties": {
+                            "tubeTypeSize": {"type": "string", "default": "Large"},
+                            "numOfTubesBooked": {"type": "integer", "default": 1}
+                        }}},
+                    },
+                    "required": ["start_time", "tube_types"]
+                }
+            }}
+        )
+
+        data = json.loads(output.choices[0].message.content)
+   
+        for tube_type in data.get('tube_types'):
+            tube_type_obj = tube_types.get(tube_type.get('tubeTypeSize').lower())
+            print("tube_type_obj", tube_type_obj)
+            if tube_type_obj[1] < tube_type.get('numOfTubesBooked'):
+                tube_type['numOfTubesBooked'] = tube_type_obj[1]
+            tube_type['tubeTypeId'] = tube_type_obj[0]
+
+   
+        return Response({'data': data}, status=status.HTTP_200_OK)
 
 
 @csrf_exempt

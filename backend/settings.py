@@ -32,6 +32,8 @@ REST_FRAMEWORK = {
 
 SECRET_KEY = config('SECRET_KEY')
 
+OPEN_AI_KEY = config('OPEN_AI_KEY')
+
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
