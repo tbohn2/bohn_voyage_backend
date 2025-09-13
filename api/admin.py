@@ -61,14 +61,14 @@ class BookingAdmin(admin.ModelAdmin):
     Admin interface for Booking model.
     """
     list_display = ('id', 'customer', 'startTime', 'endTime', 'created_at')
-    list_filter = ('startTime', 'endTime', 'created_at', 'updated_at')
+    list_filter = ('startTime', 'endTime', 'created_at', 'updated_at', 'paymentStatus', 'stripePaymentIntentId')
     search_fields = ('customer__name', 'customer__email', 'id')
     readonly_fields = ('id', 'created_at', 'updated_at')
     ordering = ('-startTime',)
     
     fieldsets = (
         ('Booking Information', {
-            'fields': ('customer', 'startTime', 'endTime')
+            'fields': ('customer', 'startTime', 'endTime', 'stripePaymentIntentId', 'paymentStatus')
         }),        
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
@@ -86,14 +86,14 @@ class TubeBookingAdmin(admin.ModelAdmin):
     Admin interface for TubeBooking model.
     """
     list_display = ('id', 'tubeType', 'booking', 'numOfTubesBooked', 'created_at')
-    list_filter = ('created_at', 'updated_at', 'tubeType')
+    list_filter = ('created_at', 'updated_at', 'tubeType', 'booking__paymentStatus')
     search_fields = ('tubeType__size', 'booking__id', 'id')
     readonly_fields = ('id', 'created_at', 'updated_at')
     ordering = ('-created_at',)
     
     fieldsets = (
         ('Tube Booking Information', {
-            'fields': ('tubeType', 'booking', 'numOfTubesBooked')
+            'fields': ('tubeType', 'booking', 'numOfTubesBooked', 'booking__paymentStatus')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),

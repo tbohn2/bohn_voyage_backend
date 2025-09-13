@@ -5,16 +5,12 @@ class CookieJWTAuthentication(JWTAuthentication):
     def authenticate(self, request):
         token = request.COOKIES.get("token")
 
-        print("token: ", token)
-        
         if token is None:
             return None
             
         try:
-            print("try")
             validated_token = self.get_validated_token(token)
             user = self.get_user(validated_token)
-            print("user: ", user)
             return (user, validated_token)
         except Exception as e:
             print("Exception: ", e)
