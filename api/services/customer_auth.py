@@ -17,8 +17,8 @@ def create_magic_link(email: str) -> str:
     token = serializer.dumps(email, salt="email-verification")
     encoded_token = quote(token)
 
-    magic_url = f"{BASE_URL}/api/customer-login/?token={encoded_token}"
-    
+    magic_url = f"{BASE_URL}/customer-login/?token={encoded_token}"
+
     return magic_url
 
 def create_long_lasting_token(customer: Customer) -> str:
