@@ -86,14 +86,14 @@ class TubeBookingAdmin(admin.ModelAdmin):
     Admin interface for TubeBooking model.
     """
     list_display = ('id', 'tubeType', 'booking', 'numOfTubesBooked', 'created_at')
-    list_filter = ('created_at', 'updated_at', 'tubeType', 'booking__paymentStatus')
+    list_filter = ('created_at', 'updated_at', 'tubeType')
     search_fields = ('tubeType__size', 'booking__id', 'id')
     readonly_fields = ('id', 'created_at', 'updated_at')
     ordering = ('-created_at',)
     
     fieldsets = (
         ('Tube Booking Information', {
-            'fields': ('tubeType', 'booking', 'numOfTubesBooked', 'booking__paymentStatus')
+            'fields': ('tubeType', 'booking', 'numOfTubesBooked')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
