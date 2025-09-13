@@ -35,7 +35,7 @@ class TubeTypeAdmin(admin.ModelAdmin):
     """
     Admin interface for TubeType model.
     """
-    list_display = ('id', 'size', 'price', 'qty', 'created_at')
+    list_display = ('id', 'size', 'price', 'qty', 'length', 'width', 'created_at')
     list_filter = ('created_at', 'updated_at')
     search_fields = ('size', 'id')
     readonly_fields = ('id', 'created_at', 'updated_at')
@@ -43,7 +43,7 @@ class TubeTypeAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Tube Information', {
-            'fields': ('size', 'price', 'qty')
+            'fields': ('size', 'price', 'qty', 'length', 'width', 'description')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),

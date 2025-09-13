@@ -32,12 +32,14 @@ class Customer(models.Model):
 
 class TubeType(models.Model):
     """
-    TubeType model with id, price, size, and qty fields.
+    TubeType model with id, price, size, length, width, and qty fields.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     price = models.FloatField()
     size = models.CharField(max_length=100)
     qty = models.IntegerField()
+    length = models.FloatField(default=0.0)
+    width = models.FloatField(default=0.0)
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

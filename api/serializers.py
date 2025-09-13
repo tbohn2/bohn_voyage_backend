@@ -43,7 +43,7 @@ class TubeTypeSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = TubeType
-        fields = ['id', 'price', 'size', 'qty', 'description', 'created_at', 'updated_at']
+        fields = ['id', 'price', 'size', 'qty', 'length', 'width', 'description', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
@@ -53,7 +53,7 @@ class TubeTypeCreateSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = TubeType
-        fields = ['price', 'size', 'qty', 'description']
+        fields = ['price', 'size', 'qty', 'length', 'width', 'description']
     
     def validate_price(self, value):
         if value <= 0:
@@ -63,6 +63,16 @@ class TubeTypeCreateSerializer(serializers.ModelSerializer):
     def validate_qty(self, value):
         if value < 0:
             raise serializers.ValidationError("Quantity cannot be negative.")
+        return value
+    
+    def validate_length(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Length must be greater than zero.")
+        return value
+    
+    def validate_width(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Width must be greater than zero.")
         return value
 
 
@@ -72,7 +82,7 @@ class TubeTypeUpdateSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = TubeType
-        fields = ['price', 'size', 'qty', 'description']
+        fields = ['price', 'size', 'qty', 'length', 'width', 'description']
     
     def validate_price(self, value):
         if value <= 0:
@@ -83,6 +93,16 @@ class TubeTypeUpdateSerializer(serializers.ModelSerializer):
         if value < 0:
             raise serializers.ValidationError("Quantity cannot be negative.")
         return value
+    
+    def validate_length(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Length must be greater than zero.")
+        return value
+    
+    def validate_width(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Width must be greater than zero.")
+        return value
 
 
 class TubeBookingSerializer(serializers.ModelSerializer):
@@ -91,11 +111,13 @@ class TubeBookingSerializer(serializers.ModelSerializer):
     """
     tube_type_size = serializers.CharField(source='tubeType.size', read_only=True)
     tube_type_price = serializers.FloatField(source='tubeType.price', read_only=True)
+    tube_type_length = serializers.FloatField(source='tubeType.length', read_only=True)
+    tube_type_width = serializers.FloatField(source='tubeType.width', read_only=True)
     booking_customer = serializers.CharField(source='booking.customer.name', read_only=True)
     
     class Meta:
         model = TubeBooking
-        fields = ['id', 'tubeType', 'tube_type_size', 'tube_type_price', 'booking', 
+        fields = ['id', 'tubeType', 'tube_type_size', 'tube_type_price', 'tube_type_length', 'tube_type_width', 'booking', 
                  'booking_customer', 'numOfTubesBooked', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 

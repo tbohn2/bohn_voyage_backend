@@ -404,6 +404,8 @@ class TubeAvailabilityView(APIView):
                 'booked_quantity': booked_tubes,
                 'available_quantity': max(0, available_tubes),  # Ensure non-negative
                 'price': tube_type.price,
+                'length': tube_type.length,
+                'width': tube_type.width,
                 'description': tube_type.description
             })
         
