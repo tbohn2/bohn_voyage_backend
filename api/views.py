@@ -7,6 +7,7 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
 from django.conf import settings
+from django.db import models
 import jwt
 import stripe
 import openai
@@ -89,7 +90,11 @@ class TubeTypeViewSet(viewsets.ModelViewSet):
     ViewSet for TubeType model CRUD operations.
     """
     queryset = TubeType.objects.all()
-    permission_classes = [permissions.IsAdminUser]  # All operations require admin
+    
+    def get_permissions(self):
+        if self.action == 'list':
+            return [permissions.AllowAny()]
+        return [permissions.IsAdminUser()]
     
     def get_serializer_class(self):
         if self.action == 'create':
@@ -325,6 +330,92 @@ class CreatePaymentIntentView(APIView):
             )
 
 
+class TubeAvailabilityView(APIView):
+    """
+    View to get tube availability for a specific date range.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        """
+        Get available tubes for each tube type within a date range.
+        
+        Query parameters:
+        - start_date: Start date in ISO format (e.g., 2025-01-01T00:00:00Z)
+        - end_date: End date in ISO format (e.g., 2025-01-01T23:59:59Z)
+        """
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        if not start_date or not end_date:
+            return Response(
+                {'error': 'Both start_date and end_date are required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            from django.utils.dateparse import parse_datetime
+            start_datetime = parse_datetime(start_date)
+            end_datetime = parse_datetime(end_date)
+            
+            if not start_datetime or not end_datetime:
+                return Response(
+                    {'error': 'Invalid date format. Use ISO format (e.g., 2025-01-01T00:00:00Z)'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            if start_datetime >= end_datetime:
+                return Response(
+                    {'error': 'start_date must be before end_date'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Invalid date format: {str(e)}'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        tube_types = TubeType.objects.all()
+        availability_data = []
+        
+        for tube_type in tube_types:
+            # Find bookings that overlap with the requested time range
+            # A booking overlaps if: booking.startTime < end_datetime AND booking.endTime > start_datetime
+            overlapping_bookings = Booking.objects.filter(
+                startTime__lt=end_datetime,
+                endTime__gt=start_datetime,
+                # paymentStatus='succeeded'
+            )
+
+            tube_bookings_count = TubeBooking.objects.filter(
+                booking__in=overlapping_bookings,
+                tubeType=tube_type
+            ).aggregate(total_booked=models.Sum('numOfTubesBooked'))['total_booked'] or 0
+            
+            booked_tubes=tube_bookings_count
+           
+            available_tubes = tube_type.qty - booked_tubes
+            
+            availability_data.append({
+                'tube_type_id': str(tube_type.id),
+                'size': tube_type.size,
+                'total_quantity': tube_type.qty,
+                'booked_quantity': booked_tubes,
+                'available_quantity': max(0, available_tubes),  # Ensure non-negative
+                'price': tube_type.price,
+                'description': tube_type.description
+            })
+        
+        return Response({
+            'date_range': {
+                'start_date': start_date,
+                'end_date': end_date
+            },
+            'availability': availability_data
+        }, status=status.HTTP_200_OK)
+
+
 class NLPViewSet(APIView):
     """
     View for NLP requests.
@@ -371,7 +462,7 @@ class NLPViewSet(APIView):
         )
 
         data = json.loads(output.choices[0].message.content)
-   
+    
         for tube_type in data.get('tube_types'):
             tube_type_obj = tube_types.get(tube_type.get('tubeTypeSize').lower())
             print("tube_type_obj", tube_type_obj)
@@ -379,7 +470,7 @@ class NLPViewSet(APIView):
                 tube_type['numOfTubesBooked'] = tube_type_obj[1]
             tube_type['tubeTypeId'] = tube_type_obj[0]
 
-   
+    
         return Response({'data': data}, status=status.HTTP_200_OK)
 
 
