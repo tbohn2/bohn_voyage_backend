@@ -31,6 +31,20 @@ CORS_ALLOWED_ORIGINS = [
     'https://bohnvoyage.com'
 ]
 
+# Allow credentials (cookies) to be sent with requests
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_ALL_HEADERS = True
+
+CORS_ALLOW_ALL_METHODS = True
+
+# CSRF settings for trusted origins
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',
+    'http://localhost:8000',
+    'https://bohnvoyage.com'
+]
+
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.AllowAny",
@@ -56,7 +70,7 @@ EMAIL_HOST_USER = 'bohnvoyageaz@gmail.com'
 EMAIL_HOST_PASSWORD = config('GMAIL_PW')
 DEFAULT_FROM_EMAIL = 'Bohn Voyage AZ <bohnvoyageaz@gmail.com>'
 
-FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:8000')
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
 
 STRIPE_PUBLIC_KEY = config('STRIPE_PUBLIC_KEY')
 STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')

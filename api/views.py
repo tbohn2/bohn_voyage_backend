@@ -5,6 +5,7 @@ from rest_framework.response import Response
 import stripe
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from django.contrib.auth.models import User
 from django.conf import settings
 from django.db import models
@@ -137,11 +138,14 @@ class TubeBookingViewSet(viewsets.ModelViewSet):
 
         return queryset
 
-
+@method_decorator(csrf_exempt, name='dispatch')
 class CustomerAuthViewSet(APIView):
     """
     ViewSet for Customer authentication.
     """
+    authentication_classes = []  # Disable all authentication classes
+    permission_classes = []      # Disable all permission classes
+
     def get(self, request):
         """
         Get customer authentication status. Used for polling customer authentication status.
@@ -175,10 +179,13 @@ class CustomerAuthViewSet(APIView):
         return Response({'message': 'Magic link sent to email', 'authenticated': False}, status=200)
         
 
+@method_decorator(csrf_exempt, name='dispatch')
 class CustomerLoginViewSet(APIView):
     """
     ViewSet for Customer login.
     """
+    authentication_classes = []  # Disable all authentication classes
+    permission_classes = []      # Disable all permission classes
     def get(self, request):
         """
         Get customer email from token in magic link url and issue long lasting http cookies only token
@@ -194,27 +201,27 @@ class CustomerLoginViewSet(APIView):
             email = serializer.loads(token, salt="email-verification", max_age=max_age_seconds)
       
             if not email:
-                return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': 'Invalid token', 'success': False}, status=status.HTTP_400_BAD_REQUEST)
             
             customer, created = Customer.objects.get_or_create(email=email)
 
             message = "Customer created" if created else "Customer logged in"
 
             long_lasting_token = create_long_lasting_token(customer)
-            response = Response({'message': message}, status=status.HTTP_200_OK)
+            response = Response({'message': message, 'success': True}, status=status.HTTP_200_OK)
             response.set_cookie('token', long_lasting_token, httponly=True)
             # response.set_cookie('token', long_lasting_token, httponly=True, secure=True, samesite='Strict')
             return response
 
         except (SignatureExpired, BadSignature):
-            return Response({'error': 'Token has expired'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': 'Token has expired', 'success': False}, status=status.HTTP_401_UNAUTHORIZED)
         except jwt.ExpiredSignatureError:
-            return Response({'error': 'Token has expired'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': 'Token has expired', 'success': False}, status=status.HTTP_401_UNAUTHORIZED)
         except jwt.InvalidTokenError:
             print(token)
-            return Response({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': 'Invalid token', 'success': False}, status=status.HTTP_401_UNAUTHORIZED)
         except Exception as e:
-            return Response({'error': f'Authentication failed: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': f'Authentication failed: {str(e)}', 'success': False}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class CreatePaymentIntentView(APIView):
