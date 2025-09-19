@@ -11,10 +11,15 @@ JWT_ALGORITHM = "HS256"
 JWT_EXP_MINUTES = 15  
 BASE_URL = settings.FRONTEND_URL
 
-def create_magic_link(email: str) -> str:    
+def create_magic_link(email: str, name: str = None, phone: str = None) -> str:    
     serializer = URLSafeTimedSerializer(JWT_SECRET)
 
-    token = serializer.dumps(email, salt="email-verification")
+    payload = {
+        'email': email,
+        'name': name,
+        'phone': phone
+    }
+    token = serializer.dumps(payload, salt="email-verification")
     encoded_token = quote(token)
 
     magic_url = f"{BASE_URL}/customer-login/?token={encoded_token}"

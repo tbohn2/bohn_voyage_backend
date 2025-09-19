@@ -172,9 +172,12 @@ class CustomerAuthViewSet(APIView):
             except (InvalidToken, TokenError):
                 pass
 
+        name = request.data.get('name')
+        phone = request.data.get('phone')
+        
         subject = "Verify link for booking"
         message = "Click the link to verify your email to proceed with booking:\n"
-        magic_link = create_magic_link(email)
+        magic_link = create_magic_link(email, name, phone)
         send_email(email, subject, message + magic_link)
         return Response({'message': 'Magic link sent to email', 'authenticated': False}, status=200)
         
@@ -198,12 +201,22 @@ class CustomerLoginViewSet(APIView):
             JWT_SECRET = settings.SECRET_KEY
             max_age_seconds = 3600
             serializer = URLSafeTimedSerializer(JWT_SECRET)         
-            email = serializer.loads(token, salt="email-verification", max_age=max_age_seconds)
+            payload = serializer.loads(token, salt="email-verification", max_age=max_age_seconds)
       
-            if not email:
+            if not payload or 'email' not in payload:
                 return Response({'error': 'Invalid token', 'success': False}, status=status.HTTP_400_BAD_REQUEST)
             
+            email = payload['email']
+            name = payload.get('name')
+            phone = payload.get('phone')
+            
             customer, created = Customer.objects.get_or_create(email=email)
+            
+            if name:
+                customer.name = name
+            if phone:
+                customer.phone_number = phone
+            customer.save()
 
             message = "Customer created" if created else "Customer logged in"
 
@@ -254,7 +267,7 @@ class CreatePaymentIntentView(APIView):
             amount = request.data.get('amount')
             currency = request.data.get('currency', 'usd')
                         
-            if not amount:
+            if amount is None:
                 return Response(
                     {'error': 'Amount is required'}, 
                     status=status.HTTP_400_BAD_REQUEST
@@ -301,22 +314,35 @@ class CreatePaymentIntentView(APIView):
             booking.save()
 
             for tube_type in request.data.get('tube_types', []):
-                tube_type_obj = TubeType.objects.get(id=tube_type.get('tubeTypeId'))
-                if not tube_type_obj:
+                num_of_tubes_booked = tube_type.get('numOfTubesBooked')
+                if num_of_tubes_booked <= 0:
+                    continue
+                
+                tube_type_id = tube_type.get('tubeTypeId')
+        
+                if not tube_type_id:
                     return Response(
-                        {'error': 'Tube type not found'}, 
+                        {'error': 'Tube type ID is required'}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                try:
+                    tube_type_obj = TubeType.objects.get(id=tube_type_id)
+                except TubeType.DoesNotExist:
+                    return Response(
+                        {'error': f'Tube type with ID {tube_type_id} not found'}, 
                         status=status.HTTP_404_NOT_FOUND
                     )
 
                 tube_booking = TubeBooking.objects.create(
                     booking=booking,
                     tubeType=tube_type_obj,
-                    numOfTubesBooked=tube_type.get('numOfTubesBooked')
+                    numOfTubesBooked=num_of_tubes_booked
                 )
 
                 tube_booking.save()
                 
-            
+
             return Response({
                 'client_secret': intent.client_secret,
                 'payment_intent_id': intent.id,
