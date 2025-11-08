@@ -28,7 +28,8 @@ INSTALLED_APPS = [
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'http://localhost:8000',
-    'https://bohnvoyage.com'
+    'https://bohnvoyage.com',
+    'https://bohn-voyage.vercel.app'
 ]
 
 # Allow credentials (cookies) to be sent with requests
